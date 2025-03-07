@@ -24,7 +24,7 @@
         container.style.cssText = `
             position: fixed;
             bottom: 10px;
-            left: 10px;
+            left: 10px; /* 修改为左下角 */
             z-index: 9999;
             background: white;
             padding: 5px;
@@ -103,12 +103,12 @@
         return cleaned.substring(0, 500).trim();
     }
 
-    // 获取音频    ##[your-domain]这里换成你部署tts-server.py的vps地址
+    // 获取音频  ##[your-domain]更改为你部署tts-Server的服务器地址
     async function fetchAudio(text, voice) {
         const cleanedText = cleanText(text);
         console.log('开始请求音频:', { text: cleanedText, voice });
         try {
-            const response = await axios.post('[your-domain]/tts', {
+            const response = await axios.post('https://[your-domain]/tts', {
                 text: cleanedText,
                 voice: voice
             }, {
@@ -184,7 +184,7 @@
         }
 
         pauseButton.disabled = false;
-        stopButton.disabled = true;
+        stopButton.disabled = false;
         isPlaying = true;
         currentIndex = 0;
 
