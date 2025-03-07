@@ -160,3 +160,4 @@
      ```bash
      sudo systemctl status tts-server
      ```
+感谢 [edge-tts](https://github.com/rany2/edge-tts)
