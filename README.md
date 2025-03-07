@@ -51,10 +51,10 @@
 
 ##### 3.3 部署 TTS 服务
 - **上传代码**：
-  - 将 `server.py` 上传至 `/root`。
+  - 将 `tts-server.py` 上传至 `/root`。
 - **测试运行**：
   ```bash
-  /root/venv/bin/python /root/server.py
+  /root/venv/bin/python /root/tts-server.py
   ```
 - **服务文件配置**：
   - 创建并编辑服务文件：
