@@ -1,18 +1,16 @@
 // ==UserScript==
 // @name         Edge TTS Online Player (Debug)
 // @namespace    http://tampermonkey.net/
-// @version      0.3.9
+// @version      0.3.11
 // @description  在线实时文本转语音播放，支持正文播放、暂停和停止，紧凑样式，左下角布局
 // @author       You
 // @match        *://*/*
 // @grant        GM_xmlhttpRequest
-// @require      https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    // 全局音频状态
     let currentAudio = null;
     let isPlaying = false;
     let paragraphs = [];
@@ -24,7 +22,7 @@
         container.style.cssText = `
             position: fixed;
             bottom: 10px;
-            left: 10px; /* 修改为左下角 */
+            left: 10px;
             z-index: 9999;
             background: white;
             padding: 5px;
@@ -71,12 +69,10 @@
         return { playSelectedButton, playAllButton, pauseButton, stopButton, voiceSelect };
     }
 
-    // 获取选中文字
     function getSelectedText() {
         return window.getSelection().toString().trim();
     }
 
-    // 获取正文段落
     function getParagraphs() {
         const paragraphs = [];
         const contentAreas = document.querySelectorAll('article p, .post-content p, .entry-content p, .article-body p, main p');
@@ -93,7 +89,6 @@
         return paragraphs.filter(text => text.length > 0);
     }
 
-    // 清理文本
     function cleanText(text) {
         let cleaned = text.replace(/adsbygoogle.*?(push|\d+)/gi, '');
         cleaned = cleaned.replace(/window\..*?=/g, '');
@@ -103,58 +98,63 @@
         return cleaned.substring(0, 500).trim();
     }
 
-    // 获取音频  ##[your-domain]更改为你部署tts-Server的服务器地址
-    async function fetchAudio(text, voice) {
+    function fetchAudio(text, voice) {
         const cleanedText = cleanText(text);
         console.log('开始请求音频:', { text: cleanedText, voice });
-        try {
-            const response = await axios.post('https://[your-domain]/tts', {
-                text: cleanedText,
-                voice: voice
-            }, {
-                responseType: 'arraybuffer',
-                timeout: 10000
-            });
-            console.log('音频请求成功:', { status: response.status, length: response.data.byteLength });
-            if (response.data.byteLength === 0) {
-                throw new Error('返回的音频数据为空');
-            }
-            return new Blob([response.data], { type: 'audio/mp3' });
-        } catch (error) {
-            console.error('音频请求失败:', error.message);
-            throw error;
-        }
-    }
-
-    // 播放音频并返回 Promise
-    function playAudio(audioBlob) {
         return new Promise((resolve, reject) => {
-            const audioUrl = URL.createObjectURL(audioBlob);
-            currentAudio = new Audio(audioUrl);
-            currentAudio.oncanplay = () => {
-                console.log('音频可以播放');
-                currentAudio.play().catch(e => {
-                    console.error('播放失败:', e);
-                    URL.revokeObjectURL(audioUrl);
-                    reject(e);
-                });
-            };
-            currentAudio.onended = () => {
-                console.log('音频播放完成');
-                URL.revokeObjectURL(audioUrl);
-                currentAudio = null;
-                resolve();
-            };
-            currentAudio.onerror = (e) => {
-                console.error('音频播放错误:', e);
-                URL.revokeObjectURL(audioUrl);
-                currentAudio = null;
-                reject(e);
-            };
+            GM_xmlhttpRequest({
+                method: 'POST',
+                url: 'https://xx.xx.xx/tts', // 请替换为实际域名
+                headers: {'Content-Type': 'application/json'},
+                data: JSON.stringify({text: cleanedText, voice: voice}),
+                responseType: 'arraybuffer',
+                timeout: 10000,
+                onload: (response) => {
+                    if (response.response.byteLength === 0) {
+                        reject(new Error('返回的音频数据为空'));
+                    } else {
+                        resolve(new Blob([response.response], { type: 'audio/mp3' }));
+                    }
+                },
+                onerror: (error) => reject(new Error('Network Error')),
+                ontimeout: () => reject(new Error('Request Timeout'))
+            });
         });
     }
 
-    // 播放选中文字
+    function playAudio(audioBlob) {
+        return new Promise((resolve, reject) => {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                audioContext.decodeAudioData(e.target.result, (buffer) => {
+                    const source = audioContext.createBufferSource();
+                    source.buffer = buffer;
+                    source.connect(audioContext.destination);
+                    source.onended = () => {
+                        audioContext.close();
+                        currentAudio = null;
+                        resolve();
+                    };
+                    source.start(0);
+                    currentAudio = source;
+                    currentAudio.context = audioContext;
+                }, (error) => {
+                    console.error('音频解码错误:', error);
+                    reject(error);
+                });
+            };
+            
+            reader.onerror = (e) => {
+                console.error('读取 Blob 错误:', e);
+                reject(e);
+            };
+            
+            reader.readAsArrayBuffer(audioBlob);
+        });
+    }
+
     async function playSelected(text, voice, pauseButton, stopButton) {
         if (!text) {
             alert('请先选择文字');
@@ -175,11 +175,10 @@
         }
     }
 
-    // 播放正文（分段）
     async function playParagraphs(paragraphs, voice, pauseButton, stopButton) {
         console.log('开始播放正文，段落数量:', paragraphs.length);
         if (!paragraphs.length) {
-            alert('未找到正文段落');
+            alert('未 Mubarak 未找到正文段落');
             return;
         }
 
@@ -205,7 +204,6 @@
         currentAudio = null;
     }
 
-    // 主函数
     function main() {
         const { playSelectedButton, playAllButton, pauseButton, stopButton, voiceSelect } = createUI();
 
@@ -223,26 +221,25 @@
 
         pauseButton.addEventListener('click', () => {
             if (currentAudio) {
-                if (currentAudio.paused) {
-                    currentAudio.play();
-                    pauseButton.textContent = '暂停';
-                } else {
-                    currentAudio.pause();
+                if (currentAudio.context.state === 'running') {
+                    currentAudio.context.suspend();
                     pauseButton.textContent = '继续';
+                } else {
+                    currentAudio.context.resume();
+                    pauseButton.textContent = '暂停';
                 }
             }
         });
 
         stopButton.addEventListener('click', () => {
             if (currentAudio) {
-                currentAudio.pause();
-                currentAudio.currentTime = 0;
-                URL.revokeObjectURL(currentAudio.src);
+                currentAudio.stop();
+                currentAudio.context.close();
                 currentAudio = null;
+                isPlaying = false;
+                pauseButton.disabled = true;
+                stopButton.disabled = true;
             }
-            isPlaying = false;
-            pauseButton.disabled = true;
-            stopButton.disabled = true;
         });
     }
 
