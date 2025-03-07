@@ -144,12 +144,12 @@
 
 ---
 
-### 下一步建议
+### 建议
 1. **安全性**：
    - 限制 CORS：`CORS(app, origins='https://[your-domain]')`。
    - 检查 HTTPS 证书有效性。
 2. **优化**：
-   - 添加日志到 `server.py`：
+   - 添加日志到 `tts-server.py`：
      ```python
      import logging
      logging.basicConfig(filename='/root/tts.log', level=logging.INFO)
