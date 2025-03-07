@@ -1,5 +1,5 @@
 # tts-server
-利用edge-tts项目部署服务，利用油猴插件实现chrome大声朗读功能
+利用edge-tts项目部署服务，通过油猴插件连接server实现chrome大声朗读功能
 
 ### 项目总结
 
